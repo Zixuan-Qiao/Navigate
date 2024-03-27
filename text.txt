@@ -1,0 +1,7 @@
+in usr main:
+	auto generation
+	verify with hadlock
+	enter main loop
+		print
+		read
+		update break

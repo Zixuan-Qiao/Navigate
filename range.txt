@@ -1,0 +1,25 @@
+debian@BeagleBone:/sys/bus/iio/devices/iio:device0$ cat in_voltage0_raw
+1761
+debian@BeagleBone:/sys/bus/iio/devices/iio:device0$ cat in_voltage0_raw
+3758
+debian@BeagleBone:/sys/bus/iio/devices/iio:device0$ cat in_voltage0_raw
+17
+debian@BeagleBone:/sys/bus/iio/devices/iio:device0$ cat in_voltage0_raw
+3741
+debian@BeagleBone:/sys/bus/iio/devices/iio:device0$ cat in_voltage0_raw
+1762
+debian@BeagleBone:/sys/bus/iio/devices/iio:device0$ cat in_voltage0_raw
+16
+debian@BeagleBone:/sys/bus/iio/devices/iio:device0$ cat in_voltage1_raw
+1703
+debian@BeagleBone:/sys/bus/iio/devices/iio:device0$ cat in_voltage1_raw
+1
+debian@BeagleBone:/sys/bus/iio/devices/iio:device0$ cat in_voltage1_raw
+3784
+debian@BeagleBone:/sys/bus/iio/devices/iio:device0$ cat in_voltage1_raw
+0
+debian@BeagleBone:/sys/bus/iio/devices/iio:device0$ cat in_voltage1_raw
+3784
+debian@BeagleBone:/sys/bus/iio/devices/iio:device0$ cat in_voltage1_raw
+1693
+
