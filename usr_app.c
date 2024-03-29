@@ -1,9 +1,15 @@
 #include "def.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 int main(void) {
 	
 	int m[SIZE][SIZE];
 	int i = 1;
+	
+	// auto generation and verification
 	while(1) {
 		auto_gen(m);
 		if(Hadlock(m))	break;
@@ -32,6 +38,13 @@ int main(void) {
 	char edge[SIZE + 3];
 	memset(edge, '*', sizeof(char) * (SIZE + 2));
 	edge[SIZE + 2] = '\0';
+	
+	char val[3];
+	val[0] = 0;
+	val[1] = 0;
+	val[2] = '\0';
+
+	int fd = open("/dev/tone0", O_RDWR);
 	
 	while(1) {
 		// print map
@@ -79,8 +92,8 @@ int main(void) {
 		sleep(1);
 		
 		// get direction
-		f_lr = fopen("./read", "r");
-		f_ud = fopen("./read2", "r");
+		f_lr = fopen("/sys/bus/iio/devices/iio:device0/in_voltage0_raw", "r");
+		f_ud = fopen("/sys/bus/iio/devices/iio:device0/in_voltage1_raw", "r");
 		
 		fgets(lr_c, LENGTH, f_lr);
 		fgets(ud_c, LENGTH, f_ud);
@@ -102,6 +115,11 @@ int main(void) {
 				if(curr_y > 0 && m[curr_x][curr_y - 1] != BLOCKED) {
 					m[curr_x][curr_y] = 0;
 					curr_y--;
+				} else {
+					val[0] = 10;
+					val[1] = 20;
+					val[2] = '\0';
+					write(fd, &val, sizeof(val));
 				}
 				m[curr_x][curr_y] = LEFT;
 				break;
@@ -109,6 +127,11 @@ int main(void) {
 				if(curr_y < SIZE - 1 && m[curr_x][curr_y + 1] != BLOCKED) {
 					m[curr_x][curr_y] = 0;
 					curr_y++;
+				} else {
+					val[0] = 5;
+					val[1] = 20;
+					val[2] = '\0';
+					write(fd, &val, sizeof(val));
 				}
 				m[curr_x][curr_y] = RIGHT;
 				break;
@@ -116,6 +139,11 @@ int main(void) {
 				if(curr_x > 0 && m[curr_x - 1][curr_y] != BLOCKED) {
 					m[curr_x][curr_y] = 0;
 					curr_x--;
+				} else {
+					val[0] = 1;
+					val[1] = 30;
+					val[2] = '\0';
+					write(fd, &val, sizeof(val));
 				}
 				m[curr_x][curr_y] = UP;
 				break;
@@ -123,6 +151,11 @@ int main(void) {
 				if(curr_x < SIZE - 1 && m[curr_x + 1][curr_y] != BLOCKED) {
 					m[curr_x][curr_y] = 0;
 					curr_x++;
+				} else {
+					val[0] = 15;
+					val[1] = 15;
+					val[2] = '\0';
+					write(fd, &val, sizeof(val));
 				}
 				m[curr_x][curr_y] = DOWN;
 				break;
@@ -139,5 +172,6 @@ int main(void) {
 		}
 	}
 	
+	close(fd);
 	return 0;
 }

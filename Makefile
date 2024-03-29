@@ -5,7 +5,7 @@ usr_app.o : usr_app.c def.h
 	gcc -c usr_app.c -g
 	
 auto_g.o : auto_g.c def.h
-	gcc -c auto_g.c
+	gcc -c auto_g.c -g
 	
 hadlock.o : hadlock.c def.h
 	gcc -c hadlock.c -g
