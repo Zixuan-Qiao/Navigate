@@ -21,6 +21,13 @@ The program interacts with the Linux Industry I/O subsystem to obtain analog inp
 
 If the next move and the map indicates that the user has hit a wall, it will issue a system call to the piezo driver to send vocal notifications to the user.  
 
+## Hardware
+| Part | Number |
+| ------- | ------- |
+| Beaglebone Black Rev C3 | 102110420 |
+| 2-Axis Joystick | 27800 |
+| Piezo | PKM22EPPH4002-B0 |
+
 ## Schematic
 **Joystick**
 
@@ -28,7 +35,7 @@ If the next move and the map indicates that the user has hit a wall, it will iss
 
 **Piezo**
 
-<img width="350" alt="2" src="https://github.com/Zixuan-Qiao/Navigate/assets/102449059/ad845501-ace8-4b36-9305-53ba1543a021">
+<img width="400" alt="2" src="https://github.com/Zixuan-Qiao/Navigate/assets/102449059/ad845501-ace8-4b36-9305-53ba1543a021">
 
 ## Demo
 ![Screenshot from 2024-03-31 11-00-19](https://github.com/Zixuan-Qiao/Navigate/assets/102449059/3e97fff4-bf04-470d-a443-28ec742e944f)
@@ -37,9 +44,10 @@ If the next move and the map indicates that the user has hit a wall, it will iss
 1. https://lwn.net/Kernel/LDD3/
 2. https://github.com/arduino/ArduinoCore-avr/blob/master/cores/arduino/Tone.cpp
 3. https://askubuntu.com/questions/882433/enable-adc-input-on-beaglebone-with-4-x-kernel
-4. https://www.kernel.org/doc/html/v5.10/driver-api/iio/index.html
-5. https://wiki.analog.com/software/linux/docs/iio/iio
-6. https://elinux.org/EBC_Exercise_10a_Analog_In
-7. https://www.linux.com/training-tutorials/how-get-analog-input-beaglebone-black/
-8. https://vadl.github.io/beagleboneblack/2016/07/29/setting-up-bbb-gpio
-9. https://www.derekmolloy.ie/kernel-gpio-programming-buttons-and-leds/
+4. https://www.youtube.com/watch?v=A0kddzeO51Y
+5. https://www.kernel.org/doc/html/v5.10/driver-api/iio/index.html
+6. https://wiki.analog.com/software/linux/docs/iio/iio
+7. https://elinux.org/EBC_Exercise_10a_Analog_In
+8. https://www.linux.com/training-tutorials/how-get-analog-input-beaglebone-black/
+9. https://vadl.github.io/beagleboneblack/2016/07/29/setting-up-bbb-gpio
+10. https://www.derekmolloy.ie/kernel-gpio-programming-buttons-and-leds/
