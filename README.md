@@ -1,4 +1,4 @@
-# Navigate
+# BeagleBone Black - Navigate
 A simple maze-solving game on Beaglebone Black. 
 
 ## Introduction
@@ -31,7 +31,7 @@ If the next move and the map indicates that the user has hit a wall, it will iss
 <img width="350" alt="2" src="https://github.com/Zixuan-Qiao/Navigate/assets/102449059/ad845501-ace8-4b36-9305-53ba1543a021">
 
 ## Demo
-
+![Screenshot from 2024-03-31 11-00-19](https://github.com/Zixuan-Qiao/Navigate/assets/102449059/3e97fff4-bf04-470d-a443-28ec742e944f)
 
 ## References
 1. https://lwn.net/Kernel/LDD3/
