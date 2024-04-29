@@ -91,6 +91,8 @@ int main(void) {
 		
 		sleep(1);
 		
+		break;
+		
 		// get direction
 		f_lr = fopen("/sys/bus/iio/devices/iio:device0/in_voltage0_raw", "r");
 		f_ud = fopen("/sys/bus/iio/devices/iio:device0/in_voltage1_raw", "r");
@@ -109,7 +111,7 @@ int main(void) {
 		else if(lr_i > 3000) dir = RIGHT;
 		else if(lr_i < 500) dir = LEFT;
 		else dir = NEUTRAL;
-
+		
 		switch(dir) {
 			case LEFT:
 				if(curr_y > 0 && m[curr_x][curr_y - 1] != BLOCKED) {
