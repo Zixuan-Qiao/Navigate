@@ -1,52 +1,33 @@
-#include <linux/module.h>
-#include <linux/init.h>
-#include <linux/fs.h>
-#include <linux/cdev.h>
-#include <linux/slab.h>
-#include <linux/device.h>
-#include <linux/delay.h>
-#include <linux/gpio.h>
-#include <linux/mutex.h>
-
-#define MAX 5
-
-static int ports[MAX] = {48, 49, 60, 115, 117};
-static char* labels[MAX] = {"P9_15", "P9_23", "P9_12", "P9_25", "P9_27"};
-static int num = MAX;
-module_param(num, int, 0644);
-MODULE_PARM_DESC(num, "Number of ports");
-
-struct piezo_dev {
-	char name[6];	// to generate sysfs user interface
-	int gpio_port;
-	dev_t dev_num;
-	char buff[3];
-	struct mutex lock;
-	struct cdev c_dev;
-};
-
-static dev_t dev_id;
-unsigned int piezo_major;
-unsigned int piezo_minor;
-struct class *dev_class;
-
-static struct piezo_dev *piezo_devices;
+#include "mytone.h"
 
 ssize_t mytone_write(struct file *filp, const char __user *data, size_t size, loff_t *loff) {
-	printk("mytone write\n");
-	struct piezo_dev *my_piezo = filp->private_data;
+	int delay, cycle, i;
+	char buff[WRITE_LEN + 1];
+	struct piezo_dev *my_piezo;
 	
-	if(mutex_lock_interruptible(&(my_piezo->lock)))
-		return -ERESTARTSYS;
+	if(size != WRITE_LEN * sizeof(char)) {
+		PDEBUG("Incorrect argument format (requires a len %d char array). \n", WRITE_LEN);
+		return 0;
+	}
 	
-	copy_from_user(my_piezo->buff, data, 2);
-	my_piezo->buff[2] = '\0';
-	int delay = (int) my_piezo->buff[0];
-	int cycle = (int) my_piezo->buff[1];
+	if(copy_from_user(buff, data, WRITE_LEN)) {
+		PDEBUG("Copying failed. \n");
+		return 0;
+	}
 	
-	printk("%s Delay: %d, cycle: %d, gpio port: %d. \n", my_piezo->name, delay, cycle, my_piezo->gpio_port);
+	my_piezo = filp->private_data;
 	
-	int i;
+	if(mutex_lock_interruptible(&(my_piezo->lock))) {
+		PDEBUG("Cannot perform mutex locking, restart system. \n");
+		return 0;
+	}
+	
+	buff[WRITE_LEN] = '\0';
+	delay = (int) buff[0];
+	cycle = (int) buff[1];
+	
+	PDEBUG("Received data: %s delay: %d, cycle: %d, gpio port: %d. \n", my_piezo->name, delay, cycle, my_piezo->gpio_port);
+	
 	for(i = 0; i < cycle; i++) {
 		gpio_set_value(my_piezo->gpio_port, 0);
 		mdelay(delay);
@@ -57,16 +38,25 @@ ssize_t mytone_write(struct file *filp, const char __user *data, size_t size, lo
 		gpio_set_value(my_piezo->gpio_port, 1);
 		mdelay(delay);
 	}
+	
 	mutex_unlock(&(my_piezo->lock));
 		
-	return 0;
+	return sizeof(char) * WRITE_LEN;
 }
 
 int mytone_open(struct inode *inode, struct file *filp) {
-	printk("mytone open\n");
 	struct piezo_dev *my_piezo;
+
+	PDEBUG("Device file opened. \n");
+	
 	my_piezo = container_of(inode->i_cdev, struct piezo_dev, c_dev);
+	if(!my_piezo) {
+		PDEBUG("Failed when retrieving data. \n");
+		return -EFAULT;
+	}
+	
 	filp->private_data = my_piezo;
+	
 	return 0;
 } 
 
@@ -76,54 +66,80 @@ static struct file_operations mytone_fops = {
 	.write = mytone_write,
 };
 
-static inline void release_gpio(int num) {
+static dev_t dev_id;
+unsigned int piezo_major;
+unsigned int piezo_minor;
+struct class *dev_class;
+static struct piezo_dev *piezo_devices;
+
+static inline void mytone_release_gpio(int num) {
 	int i;
+	
 	for(i = 0; i < num; i++) {
 		gpio_free(ports[i]);
 	}
 }
 
-static inline void release_cdev(int num) {
+static inline void mytone_release_cdev(int num) {
 	int i;
-	for(i = 0; i < num; i++) {
-		device_destroy(dev_class, piezo_devices[i].dev_num);
-		
+	
+	for(i = 0; i < num; i++) {		
 		cdev_del(&piezo_devices[i].c_dev);
 	}
 }
 
-static int __init mytone_init(void) {	
-	int result = alloc_chrdev_region(&dev_id, 0, num, "mytone");
+static inline void mytone_destroy_device(int num) {
+	int i;
+	
+	for(i = 0; i < num; i++) {
+		device_destroy(dev_class, piezo_devices[i].dev_num);
+	}
+}
+
+static int __init mytone_init(void) {
+	int result, i;
+	struct device *dev_res;
+	
+	if(num > MAX_NUM) {
+		num = MAX_NUM;
+		PDEBUG("Piezo number reduced, maximum is %d. \n", MAX_NUM);
+	
+	}
+	
+	result = alloc_chrdev_region(&dev_id, 0, num, "mytone");
 	if(result < 0) {
-		printk("Failed when requesting device number. \n");
+		PDEBUG("Failed when requesting device number. \n");
 		return result;
 	}
 	piezo_major = MAJOR(dev_id);
 	piezo_minor = MINOR(dev_id);
 	
-	piezo_devices = (struct piezo_dev *)kmalloc(num * sizeof(struct piezo_dev), __GFP_NORETRY);
+	piezo_devices = (struct piezo_dev *)kzalloc(num * sizeof(struct piezo_dev), GFP_KERNEL);
 	if(!piezo_devices) {
 		result = -ENOMEM;
 		goto km_fail;
 	}
 	
 	dev_class = class_create(THIS_MODULE, "piezo");
-	if(IS_ERR(dev_class)) {
+	result = (int)PTR_ERR_OR_ZERO(dev_class);
+	if(result) {
+		PDEBUG("Failed when creating device class. \n");
 		goto class_fail;
 	}
 	
-	int i;
 	for(i = 0; i < num; i++) {
 		if(!gpio_is_valid(ports[i])) {
-			printk("Invalid GPIO number %d. \n", ports[i]);
+			PDEBUG("Invalid GPIO number %d. \n", ports[i]);
+			result = -ENOTTY;
 			goto gpio_fail;
 		}
 	}
 	
 	for(i = 0; i < num; i++) {
-		if(gpio_request(ports[i], labels[i]) < 0) {
+		result = gpio_request(ports[i], labels[i]);
+		if(result < 0) {
 			printk("Failed when requesting %s. \n", labels[i]);
-			release_gpio(i);
+			mytone_release_gpio(i);
 			goto gpio_fail;
 		}
 	}
@@ -143,32 +159,35 @@ static int __init mytone_init(void) {
 		piezo_devices[i].name[5] = '\0';
 		
 		piezo_devices[i].dev_num = MKDEV(piezo_major, (piezo_minor + i));
-		printk("Piezo number %d, MKDEV. \n", i);
 		
 		cdev_init(&(piezo_devices[i].c_dev), &mytone_fops);
-		printk("Piezo number %d, cdev init. \n", i);
 		
 		piezo_devices[i].c_dev.owner = THIS_MODULE;
 		
-		int error = cdev_add(&(piezo_devices[i].c_dev), piezo_devices[i].dev_num, 1);
-		printk("Piezo number %d, cdev add. \n", i);
-		if(error) {
-			release_cdev(i);
+		result = cdev_add(&(piezo_devices[i].c_dev), piezo_devices[i].dev_num, 1);
+		if(result < 0) {
+			PDEBUG("Piezo number %d, failed when adding cdev. \n", i);
+			mytone_release_cdev(i);
+			mytone_destroy_device(i);
+			goto cdev_fail;
+		}	
+		
+		dev_res= device_create(dev_class, NULL, piezo_devices[i].dev_num, NULL, piezo_devices[i].name);
+		result = (int)PTR_ERR_OR_ZERO(dev_res);
+		if(result) {
+			PDEBUG("Piezo number %d, failed when creating device file. \n", i);
+			mytone_release_cdev(i + 1);
+			mytone_destroy_device(i);
 			goto cdev_fail;
 		}
 		
-		printk("Piezo number %d, cdev added. \n", i);
-		
 		mutex_init(&(piezo_devices[i].lock));
-		
-		device_create(dev_class, NULL, piezo_devices[i].dev_num, NULL, piezo_devices[i].name);
-		printk("Piezo number %d, device created. \n", i);
 	}
 	
 	return 0;
 
 cdev_fail:
-	release_gpio(num);
+	mytone_release_gpio(num);
 
 gpio_fail:
 	class_destroy(dev_class);
@@ -183,9 +202,11 @@ km_fail:
 }
 
 static void __exit mytone_exit(void) {
-	release_cdev(num);
+	mytone_destroy_device(num);
 
-	release_gpio(num);
+	mytone_release_cdev(num);
+
+	mytone_release_gpio(num);
 
 	class_destroy(dev_class);
 
@@ -193,11 +214,8 @@ static void __exit mytone_exit(void) {
 	
 	unregister_chrdev_region(dev_id, num);
 	
-	printk("mytone unloaded\n");
+	PDEBUG("Driver unloaded. \n");
 }
 
 module_init(mytone_init);
 module_exit(mytone_exit);
-
-MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Manage multiple piezos");
